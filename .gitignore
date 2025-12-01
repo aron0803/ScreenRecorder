@@ -1,0 +1,38 @@
+# Build results
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosstate
+
+# Visual Studio cache/options
+.vs/
+*.cache
+
+# NuGet Packages
+*.nupkg
+packages/
+
+# Build outputs
+*.exe
+*.dll
+*.pdb
+
+# Ignore all zip files
+*.zip
+
+# Config files (keep the template)
+config.ini
+
+# Temporary files
+*.tmp
+*.log
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Recordings
+record/
