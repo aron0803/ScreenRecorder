@@ -15,9 +15,10 @@ function Show-Menu {
     Write-Color "================================" "Yellow"
     Write-Host ""
     Write-Host "1. Commit and Push"
-    Write-Host "2. Pull Specific Version"
-    Write-Host "3. Show Git Status"
-    Write-Host "4. Exit"
+    Write-Host "2. Push Only"
+    Write-Host "3. Pull Specific Version"
+    Write-Host "4. Show Git Status"
+    Write-Host "5. Exit"
     Write-Host ""
 }
 
@@ -131,6 +132,25 @@ function Do-CommitPush {
     Write-Color "Commit successful" "Green"
     
     $branch = git rev-parse --abbrev-ref HEAD
+    
+    # Handle Detached HEAD
+    if ($branch -eq "HEAD") {
+        Write-Color "`nWarning: You are in 'Detached HEAD' state!" "Red"
+        $fix = Read-Host "Merge these changes to 'main' branch? (Y/N)"
+        if ($fix -eq 'Y' -or $fix -eq 'y') {
+            $tempBranch = "temp_fix_$(Get-Date -Format 'yyyyMMddHHmmss')"
+            git branch $tempBranch
+            git checkout main
+            git merge $tempBranch
+            git branch -d $tempBranch
+            $branch = "main"
+            Write-Color "Switched to main and merged changes." "Green"
+        } else {
+            Write-Color "Cannot push from Detached HEAD. Please checkout a branch first." "Red"
+            return
+        }
+    }
+
     Write-Color "`nCurrent branch: $branch" "Yellow"
     
     $pushConfirm = Read-Host "`nPush to remote? (Y/N)"
@@ -157,6 +177,59 @@ function Do-CommitPush {
         }
     }
     else {
+        Write-Color "Push successful!" "Green"
+    }
+}
+
+function Do-Push {
+    Write-Color "`n========== Push Only ==========" "Cyan"
+    
+    $branch = git rev-parse --abbrev-ref HEAD
+    
+    if ($branch -eq "HEAD") {
+        Write-Color "`nWarning: You are in 'Detached HEAD' state!" "Red"
+        Write-Color "This implies your changes are not on a named branch." "Yellow"
+        $fix = Read-Host "Merge changes to 'main' and push? (Y/N)"
+        if ($fix -eq 'Y' -or $fix -eq 'y') {
+            # Check for uncommitted changes
+            $status = git status --porcelain
+            $stashed = $false
+            if ($status) {
+                Write-Color "Stashing uncommitted changes..." "Yellow"
+                git stash
+                $stashed = $true
+            }
+
+            $tempBranch = "temp_fix_$(Get-Date -Format 'yyyyMMddHHmmss')"
+            git branch $tempBranch
+            git checkout main
+            git merge $tempBranch
+            git branch -d $tempBranch
+            $branch = "main"
+            
+            if ($stashed) {
+                git stash pop
+            }
+            Write-Color "Switched to main and merged changes." "Green"
+        } else {
+            Write-Color "Operation cancelled." "Yellow"
+            return
+        }
+    }
+    
+    Write-Color "`nPushing branch '$branch' to remote..." "Yellow"
+    git push origin $branch
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Color "`nPush failed!" "Red"
+        $forcePush = Read-Host "Force push? (Y/N)"
+        if ($forcePush -eq 'Y' -or $forcePush -eq 'y') {
+            git push -f origin $branch
+            if ($LASTEXITCODE -eq 0) {
+                Write-Color "Force push successful!" "Green"
+            }
+        }
+    } else {
         Write-Color "Push successful!" "Green"
     }
 }
@@ -276,13 +349,14 @@ function Main {
     
     while ($true) {
         Show-Menu
-        $choice = Read-Host "Choose function (1-4)"
+        $choice = Read-Host "Choose function (1-5)"
         
         switch ($choice) {
             "1" { Do-CommitPush }
-            "2" { Do-PullVersion }
-            "3" { Show-Status }
-            "4" { 
+            "2" { Do-Push }
+            "3" { Do-PullVersion }
+            "4" { Show-Status }
+            "5" { 
                 Write-Color "`nGoodbye!" "Green"
                 exit 
             }
@@ -292,7 +366,7 @@ function Main {
             }
         }
         
-        if ($choice -ne "4") {
+        if ($choice -ne "5") {
             Read-Host "`nPress Enter to continue"
         }
     }
