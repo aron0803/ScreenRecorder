@@ -16,8 +16,8 @@ $ProjectRoot = $PSScriptRoot
 $ProjectFile = Join-Path $ProjectRoot "ScreenRecorder.csproj"
 $BinPath = Join-Path $ProjectRoot "bin\$Platform\$Configuration\net48"
 $ReleasePath = Join-Path $ProjectRoot "Release"
-$Version = (Get-Date -Format "yyyyMMdd")
-$ReleaseFolder = Join-Path $ReleasePath "ScreenRecorder_$Version"
+# $Version = (Get-Date -Format "yyyyMMdd")
+$ReleaseFolder = Join-Path $ReleasePath "ScreenRecorder"
 
 # Check project file exists
 if (-not (Test-Path $ProjectFile)) {
