@@ -34,7 +34,7 @@ Thumbs.db
 # Recordings
 record/
 
-# Allow Release folder contents
-!Release/*.exe
-!Release/*.dll
-!Release/*.pdb
+# Allow Release folder contents (recursive)
+!Release/**/*.exe
+!Release/**/*.dll
+!Release/**/*.pdb
