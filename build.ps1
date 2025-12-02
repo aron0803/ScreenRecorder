@@ -1,5 +1,6 @@
 # ScreenRecorder Build Script
 # Auto compile and package ScreenRecorder application
+# Updated for single release folder
 
 param(
     [string]$Configuration = "Release",
