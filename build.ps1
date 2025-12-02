@@ -5,8 +5,84 @@
 param(
     [string]$Configuration = "Release",
     [string]$Platform = "x64",
-    [switch]$SkipPackage
+    [switch]$SkipPackage,
+    [switch]$Publish
 )
+
+function Update-Version {
+    param($AssemblyInfoPath)
+    
+    if (-not (Test-Path $AssemblyInfoPath)) {
+        Write-Host "Warning: AssemblyInfo.cs not found at $AssemblyInfoPath" -ForegroundColor Yellow
+        return $null
+    }
+
+    $content = Get-Content $AssemblyInfoPath
+    $newVersion = ""
+    
+    $newContent = $content | ForEach-Object {
+        if ($_ -match '\[assembly: AssemblyVersion\("(\d+)\.(\d+)\.(\d+)\.(\d+)"\)\]') {
+            $major = $matches[1]
+            $minor = $matches[2]
+            $build = $matches[3]
+            $revision = [int]$matches[4] + 1
+            $newVersion = "$major.$minor.$build.$revision"
+            '[assembly: AssemblyVersion("{0}")]' -f $newVersion
+        }
+        elseif ($_ -match '\[assembly: AssemblyFileVersion\("(\d+)\.(\d+)\.(\d+)\.(\d+)"\)\]') {
+            # Update FileVersion to match
+            '[assembly: AssemblyFileVersion("{0}")]' -f $newVersion
+        }
+        else {
+            $_
+        }
+    }
+    
+    $newContent | Set-Content $AssemblyInfoPath
+    return $newVersion
+}
+
+function Git-Release {
+    param($Version, $ZipPath)
+    
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "  Git Release" -ForegroundColor Cyan
+    Write-Host "========================================" -ForegroundColor Cyan
+    
+    # Check for uncommitted changes
+    $status = git status --porcelain
+    if (-not $status) {
+        Write-Host "No changes to release." -ForegroundColor Yellow
+        return
+    }
+    
+    # Get last commit message as default description if available
+    $lastCommit = git log -1 --pretty=%B
+    $defaultMsg = "Bug fixes and improvements"
+    if ($lastCommit) {
+        $defaultMsg = $lastCommit.Trim()
+    }
+    
+    Write-Host "Enter release description (Default: '$defaultMsg'):" -ForegroundColor Yellow
+    $desc = Read-Host
+    if ([string]::IsNullOrWhiteSpace($desc)) {
+        $desc = $defaultMsg
+    }
+    
+    $releaseMsg = "Release v${Version}: $desc"
+    
+    Write-Host "Committing and pushing..." -ForegroundColor Yellow
+    git add .
+    git commit -m $releaseMsg
+    git push origin main
+    
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  [OK] Successfully pushed to GitHub" -ForegroundColor Green
+    }
+    else {
+        Write-Host "  [ERROR] Failed to push to GitHub" -ForegroundColor Red
+    }
+}
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  ScreenRecorder Build Tool" -ForegroundColor Cyan
@@ -24,6 +100,19 @@ $ReleaseFolder = Join-Path $ReleasePath "ScreenRecorder"
 if (-not (Test-Path $ProjectFile)) {
     Write-Host "Error: Project file not found: $ProjectFile" -ForegroundColor Red
     exit 1
+}
+
+# Version Management
+$AssemblyInfo = Join-Path $ProjectRoot "Properties\AssemblyInfo.cs"
+$CurrentVersion = "1.0.0.0"
+
+if ($Publish) {
+    Write-Host "Updating version..." -ForegroundColor Yellow
+    $ver = Update-Version $AssemblyInfo
+    if ($ver) {
+        $CurrentVersion = $ver
+        Write-Host "  [OK] Version bumped to $CurrentVersion" -ForegroundColor Green
+    }
 }
 
 # Find MSBuild
@@ -237,5 +326,10 @@ if (Test-Path $ZipPath) {
 }
 
 Write-Host ""
+Write-Host ""
 Write-Host "All done!" -ForegroundColor Green
 Write-Host ""
+
+if ($Publish) {
+    Git-Release -Version $CurrentVersion -ZipPath $ZipPath
+}

@@ -7,8 +7,13 @@ echo   ScreenRecorder 快速編譯
 echo ========================================
 echo.
 
-REM 執行 PowerShell 編譯腳本
-powershell.exe -ExecutionPolicy Bypass -File "%~dp0build.ps1" %*
+REM Ask for release
+set /p publish="Publish to GitHub (Bump Version & Push)? (Y/N): "
+if /i "%publish%"=="Y" (
+    powershell.exe -ExecutionPolicy Bypass -File "%~dp0build.ps1" -Publish %*
+) else (
+    powershell.exe -ExecutionPolicy Bypass -File "%~dp0build.ps1" %*
+)
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
