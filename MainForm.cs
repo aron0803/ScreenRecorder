@@ -509,12 +509,30 @@ namespace ScreenRecorder
                     bounds = Screen.PrimaryScreen.Bounds;
                 }
 
+                // Hide overlays before screenshot
+                bool borderVisible = regionBorder != null && regionBorder.Visible;
+                bool keysVisible = keyOverlay != null && keyOverlay.Visible;
+
+                if (borderVisible) regionBorder.Hide();
+                // We don't want to hide keys if the user specifically wants to capture them, 
+                // but usually "clean screenshot" implies no overlays. 
+                // However, the user specifically asked to remove the "red frame".
+                // I will hide the key overlay too as it's an overlay.
+                if (keysVisible) keyOverlay.Visible = false;
+
+                // Allow a brief moment for the UI to update
+                System.Threading.Thread.Sleep(50);
+
                 using (Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height))
                 {
                     using (Graphics g = Graphics.FromImage(bitmap))
                     {
                         g.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
                     }
+
+                    // Restore overlays
+                    if (borderVisible) regionBorder.Show();
+                    if (keysVisible) keyOverlay.Visible = true;
 
                     // Generate filename with milliseconds to avoid conflicts
                     string baseFileName = $"Screenshot_{DateTime.Now:yyyyMMdd_HHmmss_fff}";
@@ -545,6 +563,9 @@ namespace ScreenRecorder
             catch (Exception ex)
             {
                 UpdateStatus($"截圖失敗: {ex.Message}", recorder.IsRecording);
+                // Ensure overlays are restored even if error occurs
+                if (rbRegion.Checked) UpdateRegionBorder();
+                if (chkShowKeys.Checked) UpdateKeyOverlayVisibility();
             }
         }
 
