@@ -20,9 +20,6 @@ packages/
 *.dll
 *.pdb
 
-# Ignore all zip files
-*.zip
-
 # Config files (keep the template)
 config.ini
 
