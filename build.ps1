@@ -240,7 +240,8 @@ Write-Host ""
 # Required files list
 $RequiredFiles = @(
     "ScreenRecorder.exe",
-    "ScreenRecorderLib.dll"
+    "ScreenRecorderLib.dll",
+    "app_icon.png"
 )
 
 # Optional files list

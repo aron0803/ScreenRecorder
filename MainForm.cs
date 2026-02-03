@@ -6,6 +6,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
 
 namespace ScreenRecorder
 {
@@ -29,14 +30,35 @@ namespace ScreenRecorder
         private string VideoFolder => Path.Combine(RecordFolder, "Videos");
         private string ScreenshotFolder => Path.Combine(RecordFolder, "Screenshots");
         private string AudioFolder => Path.Combine(RecordFolder, "Audio");
+        
+        [DllImport("shell32.dll", SetLastError = true)]
+        private static extern void SetCurrentProcessExplicitAppUserModelID([MarshalAs(UnmanagedType.LPWStr)] string AppID);
+        
+        private const string AppID = "Aron0803.ScreenRecorder.V1";
 
         public MainForm()
         {
+            // Set AppID before InitializeComponent for taskbar grouping
+            try { SetCurrentProcessExplicitAppUserModelID(AppID); } catch { }
+            
             InitializeComponent();
             recorder = new Recorder();
             this.Load += MainForm_Load;
             this.FormClosing += MainForm_FormClosing;
             this.Activated += MainForm_Activated;
+            
+            try
+            {
+                string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_icon.png");
+                if (File.Exists(iconPath))
+                {
+                    using (var bmp = new Bitmap(iconPath))
+                    {
+                        this.Icon = Icon.FromHandle(bmp.GetHicon());
+                    }
+                }
+            }
+            catch { /* Ignore icon loading errors */ }
         }
 
         private void MainForm_Activated(object sender, EventArgs e)
@@ -72,7 +94,8 @@ namespace ScreenRecorder
             {
                 MessageBox.Show($"按鍵顯示功能初始化失敗: {ex.Message}", "警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
-            UpdateStatus("就緒 - F8:錄音 F9:錄影 F10:截圖");
+            string dpiStatus = DpiHelper.IsScaled() ? $" [DPI: {DpiHelper.GetScalePercentage()}%]" : "";
+            UpdateStatus($"就緒 - F8:錄音 F9:錄影 F10:截圖{dpiStatus}");
         }
 
         private void InitializeKeyOverlay()
@@ -180,7 +203,14 @@ namespace ScreenRecorder
         private void UpdateRegionButtonText()
         {
             if (currentRegion.Width > 0 && currentRegion.Height > 0)
-                btnSelectRegion.Text = $"範圍: {currentRegion.Width}x{currentRegion.Height}";
+            {
+                string dpiInfo = "";
+                if (DpiHelper.IsScaled())
+                {
+                    dpiInfo = $" ({DpiHelper.GetScalePercentage()}%)";
+                }
+                btnSelectRegion.Text = $"範圍: {currentRegion.Width}x{currentRegion.Height}{dpiInfo}";
+            }
             else
                 btnSelectRegion.Text = "選取範圍...";
         }

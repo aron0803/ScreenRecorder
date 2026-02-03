@@ -28,7 +28,10 @@ namespace ScreenRecorder
         public SelectionForm()
         {
             this.FormBorderStyle = FormBorderStyle.None;
-            this.WindowState = FormWindowState.Maximized;
+            // Support multiple monitors with different resolutions
+            this.StartPosition = FormStartPosition.Manual;
+            this.Bounds = SystemInformation.VirtualScreen;
+            
             this.DoubleBuffered = true;
             this.Cursor = Cursors.Cross;
             this.BackColor = Color.Black;
@@ -90,6 +93,8 @@ namespace ScreenRecorder
                         RECT rect;
                         if (GetWindowRect(hWnd, out rect))
                         {
+                            // GetWindowRect returns physical coordinates
+                            // Store them directly as they are already in screen coordinates
                             SelectedRegion = new Rectangle(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
                         }
                         else
@@ -104,7 +109,7 @@ namespace ScreenRecorder
                 }
                 else
                 {
-                    // Drag selection
+                    // Drag selection - these are already in screen coordinates
                     SelectedRegion = GetRectangle(startPoint, e.Location);
                 }
 
